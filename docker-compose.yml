@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+
+  sql-server-db:
+    container_name: mssql
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: "Pass@word"
+      ACCEPT_EULA: "Y"
+
+    networks:
+      vault-network:
+        ipv4_address: 172.21.0.21
+        aliases:
+          - sql-server
+  
+  vault-server:
+    container_name: vault-server
+    image: vault:latest
+    ports:
+      - "8200:8200"
+      - "8500:8500"
+    volumes:
+    - "./cert:/vault/cert"
+    - "./config:/vault/config"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "vault-plaintext-root-token"
+    cap_add:
+      - IPC_LOCK
+    networks:
+      vault-network:
+        ipv4_address: 172.21.0.10
+        aliases:
+          - vault-server
+
+  # vault-client:
+  #   build: .
+  #   environment:
+  #     VAULT_ADDR: "http://vault-server:8200"
+  #   networks:
+  #     vault-network:
+  #       ipv4_address: 172.21.0.20
+  #       aliases:
+  #         - vault-client
+
+networks:
+  vault-network:
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+

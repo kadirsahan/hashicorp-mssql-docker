@@ -1,0 +1,107 @@
+
+docker-compose up
+docker-compose down --remove-orphans
+
+Unseal Key: o044cg8phWOhywLbLY1/i3yOVbp5uW2HI+ZBXyJ/x6E=
+vault-server     | Root Token: vault-plaintext-root-token
+
+vault login token=<token>
+
+
+vault secrets enable database
+
+
+
+vault write database/config/my-mssql-database \
+    plugin_name=mssql-database-plugin \
+    connection_url='sqlserver://{{username}}:{{password}}@sql-server-db:1433' \
+    allowed_roles="my-role" \
+    username="sa" \
+    password="Pass@word"
+
+
+
+vault write database/roles/my-role \
+    db_name=my-mssql-database \
+    creation_statements="CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';\
+        CREATE USER [{{name}}] FOR LOGIN [{{name}}];\
+        GRANT SELECT ON SCHEMA::dbo TO [{{name}}];" \
+    default_ttl="1h" \
+    max_ttl="24h"
+
+
+/ # vault read database/creds/my-role
+Key                Value
+---                -----
+lease_id           database/creds/my-role/w72DxKPwwnlWe0me7aKT3twn
+lease_duration     1h
+lease_renewable    true
+password           d-HJKr9htpgHThaoMCTR
+username           v-token-my-role-QiyO44kAxByQ38QoDfg1-1632220199
+
+
+➜  ~ curl --header "X-Vault-Token: vault-plaintext-root-token" http://localhost:8200/v1/database/creds/my-role
+{
+  "request_id": "5873529b-1da5-1c1b-1616-07ca8ab12227",
+  "lease_id": "database/creds/my-role/XAxWL4ckAjZonCy5mIkCqGGm",
+  "renewable": true,
+  "lease_duration": 3600,
+  "data": {
+    "password": "H3VUTJGAFS2OWAYWLaF-",
+    "username": "v-token-my-role-B5bFMEAz6Ig0k7CCmnxy-1632221532"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+
+{
+  "request_id": "b05d2605-9f2e-28fb-ef89-5402d77b58dd",
+  "lease_id": "database/creds/my-role/5wLdDhz6oFJyhLFU8QcGTON9",
+  "renewable": true,
+  "lease_duration": 3600,
+  "data": {
+    "password": "k-kwoNRIhH4ucGPXW5J9",
+    "username": "v-token-my-role-Ky9wFJ6jMcSFuXLSkAgU-1632223095"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+
+
+
+
+curl --header "X-Vault-Token: vault-plaintext-root-token" http://localhost:8200/v1/database/creds/my-role
+
+
+
+
+vault lease revoke database/creds/my-role/XAxWL4ckAjZonCy5mIkCqGGm
+
+
+curl -X PUT -H "X-Vault-Token: vault-plaintext-root-token" -d '{"lease_id":"database/creds/my-role/kY0Tu14RobiStwd0NXufxUWs","sync":true}' http://0.0.0.0:8200/v1/sys/leases/revoke
+
+curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://127.0.0.1:8200/v1/secret/my-secret
+
+
+
+
+
+openssl req -newkey rsa:4096 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem 
+
+
+
+
+
+vault write pki_int/roles/vault-ca \
+allow_any_name=true \
+max_ttl=”720h” \
+generate_lease=true
+
+
+

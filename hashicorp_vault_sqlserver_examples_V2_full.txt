@@ -1,0 +1,152 @@
+openssl genrsa -out certAuth.key 2048
+ 4862  ll
+ 4863  vi caconf.certAuth.conf
+ 4864  cat caconf.certAuth.conf
+ 4865  openssl req -x509 -new -nodes -key certAuth.key -sha256 -days 2014 -out certAuth.pem -config caconf.certAuth.conf -extensions v3_ca -subj "/CN=VaultNBKCA"
+ 4866  ll
+ 4867  export VAULTFQDN=vault.testdomain.local
+ 4868  echo $VAULTFQDN
+ 4869  openssl req -new -newkey rsa:2048 -nodes -keyout vault.key -out vault.csr -subj "/CN=$VAULTFQDN"
+ 4870  ll
+ 4871  vi caconf.vault.conf
+ 4872  openssl x509 -req -in vault.csr -CA certAuth.pem -CAkey certAuth.key -CAcreateserial -out vault.crt -days 365 -sha256 -extfile caconf.vault.conf
+ 4873  vi caconf.vault.conf
+ 4874  openssl x509 -req -in vault.csr -CA certAuth.pem -CAkey certAuth.key -CAcreateserial -out vault.crt -days 365 -sha256 -extfile caconf.vault.conf
+ 4875  ll
+ 4876  ls -alrt
+ 4877  vi caconf.user.conf
+ 4878  openssl req -new -newkey rsa:2048 -nodes -keyout user.key -out user.csr -subj "/CN=ssisuser"
+ 4879  ls -alrt
+ 4880  vi vault.hcl
+ 4881  sudo sh -c 'echo "127.0.0.1 vault.testdomain.local" >> /etc/hosts'
+ 4882  cat /etc/hosts
+ 4883  ll
+ 4884  ls -alrt
+ 4885  vault server -dev -config=vault.hcl
+ 4886  ./vault server -dev -config=vault.hcl
+ 4887* docker exec -it vault-server sh
+ 4888* docker ps
+ 4889* docker-compose down --remove-orphans
+ 4890  ll
+ 4891  cat /etc/hosts
+ 4892  ll
+ 4893  cat vault.hcl
+ 4894  ./vault server -dev -config=vault.hcl
+
+
+openssl x509 -req -in cert/user.csr -CA cert/certAuth.pem -CAkey cert/certAuth.key -CAcreateserial -out cert/user.crt -days 365 -sha256 -extfile cert/caconf.user.conf
+
+
+vault write auth/cert/certs/apk1 display_name=apk1=2 certificate=@cert/certAuth.pem ttl=3600
+
+
+vault write auth/cert/certs/ssisuser display_name=ssisuser policies=database,default certificate=@/vault/cert/certAuth.pem
+
+
+vault write auth/cert/certs/ssisuser display_name=ssisuser policies=database certificate=@/vault/certAuth.pem ttl=3600
+
+
+vault login -ca-cert=cert/certAuth.pem -method=cert -client-cert=cert/user.crt -client-key=cert/user.key  name=ssisuser
+
+./vault login -ca-cert=cert/certAuth.pem -method=cert -client-cert=cert/user.crt -client-key=cert/user.key name=ssisuser
+
+vault login -ca-cert=certAuth.pem -method=cert -client-cert=user.crt -client-key=user.key  name=web
+
+
+export VAULT_ADDR="https://vault.testdomain.local:8500"
+
+
+ cp /vault/cert/vault.crt /usr/local/share/ca-certificates/vault.crt
+
+ cp /vault/cert/certAuth.pem /usr/local/share/ca-certificates/certAuth.pem
+
+ cp /vault/cert/user.crt /usr/local/share/ca-certificates/user.crt
+
+ / # cp /vault/cert/certAuth.pem /etc/ssl/certs/
+/ # cp /vault/cert/vault.crt /etc/ssl/certs/
+/ # cat /vault/cert/certAuth.pem >> /etc/ssl/certs/ca-certificates.crt
+/ # cat /vault/cert/vault.crt >> /etc/ssl/certs/ca-certificates.crt
+
+cat /vault/cert/user.crt >> /etc/ssl/certs/ca-certificates.crt
+
+cp /vault/cert/user.crt /etc/ssl/certs/
+
+ echo "127.0.0.1 vault.testdomain.local" >> /etc/hosts
+
+
+ update-ca-certificates
+
+ vault login token=vault-plaintext-root-token
+
+docker exec -it vault-server sh
+
+
+vault auth enable cert
+
+
+
+docker-compose down --remove-orphans
+
+docker-compose up
+
+
+
+
+vault write auth/cert/certs/mssql \
+    display_name=mssql \
+    policies=mssql \
+    certificate=@vault.crt \
+    ttl=3600
+
+vault write auth/cert/certs/mssql \
+    display_name=mssql \
+    policies=mssql \
+    certificate=@certAuth.pem \
+    ttl=3600
+
+vault write auth/cert/certs/mssql \
+    display_name=mssql \
+    policies=mssql \
+    certificate=@vault.pem \
+    ttl=3600
+
+
+
+/ # find / -name ca-cert-vault.pem
+/etc/ssl/certs/ca-cert-vault.pem
+/vault/cert/ca-cert-vault.pem
+
+/ # find / -name ca-cert-user.pem
+/etc/ssl/certs/ca-cert-user.pem
+
+vault write auth/cert/certs/ssisuser display_name=ssisuser policies=database,default certificate=@/vault/cert/ca-cert-user.pem
+
+vault login -ca-cert=/vault/cert/certAuth.pem -method=cert -client-cert=/vault/cert/user.crt -client-key=/vault/cert/user.key  name=ssisuser
+
+
+
+
+
+vault login -ca-cert=/vault/cert/certAuth.pem -method=cert -client-cert=/vault/cert/user.crt -client-key=/vault/cert/user.key  name=ssisuser
+
+
+
+https://stackoverflow.com/questions/991758/how-to-get-pem-file-from-key-and-crt-files
+
+
+
+
+
+
+
+openssl req -new -newkey rsa:2048 -nodes -keyout user_app.key -out user_app.csr -subj "/CN=nssisuser"
+
+
+openssl x509 -req -in user_app.csr -CA cert/certAuth.pem -CAkey cert/certAuth.key -CAcreateserial -out user_app.crt -days 365 -sha256 -extfile caconf.user_app.conf
+
+
+
+vault login -ca-cert=/vault/cert/certAuth.pem -method=cert -client-cert=/vault/cert/user_app.crt -client-key=/vault/cert/user_app.key  name=nssisuser
+
+
+
